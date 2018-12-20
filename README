@@ -1,0 +1,127 @@
+Task:
+Write a script, which will convert json files to xml files, encrypt and transfer it in a remote location.
+
+Environment:
+Python, Docker
+
+Description:
+Solution should be prepared as two Docker images, 1st to send files, and 2nd to receive them.
+
+Python script on image A:
+1. convert all json files to xml
+2. encrypt the files
+3. Transfer it to a remote location (machine B)
+
+Python script on image B:
+1. Receive files
+2. Decrypt and store files
+
+So, in other words, pipeline should look like:
+Json -> XML -> encryption -> transfer -> decryption -> XML
+
+Solution:
+
+Pre-requisites:
+1. Docker >= 18.04. Installed and running.
+2. OS: Tested on Centos 7.5
+3. Machine B should be ssh-able from Machine A and vice-versa.
+4. Internet should be accessible on the host where images will be built.
+5. Docker hub registry should be accessible.
+
+Steps:
+
+On Machine A and Machine B:
+
+1. Untar neueda.tar.gz:
+tar -zxvf neueda.tar.gz
+cd neueda/
+2. Give executable permission to jsontoxml.sh
+chmod +x jsontoxml.sh
+
+On Machine A:
+3.a. Open jsontoxml.sh and Edit the following variables:
+
+HOST_NAME=10.0.0.1 ###IP of Machine B
+HOST_USERNAME=root ###Username of Machine B for scp. This user should have full access to $FILE_PATH.
+HOST_PASSWORD="root@123" ###Password of Machine B for scp.
+FILE_PATH="/root/files" ###File path on Machine A and Machine B where json and xml files will be stored.
+                        ###This directory will be created if does not exist. Executing user should have full access to this directory.
+ENCRYPT_PASSWORD="mypassword" ###Password for encrypting files. Should be same on both Machines.
+IMAGE_NAME=aratik711/django:2.2 ###Image name to be built
+PORT=8000 ###Port on Docker host on which API is to be exposed
+
+Save file and exit
+
+On Machine B:
+3.b. Open jsontoxml.sh and Edit the following variables:
+
+HOST_NAME=10.0.0.2 ###IP of Machine A
+HOST_USERNAME=root ###Username of Machine A for scp. This user should have full access to $FILE_PATH.
+HOST_PASSWORD="root@123" ###Password of Machine A for scp.
+FILE_PATH="/root/files" ###File path on Machine A and Machine B where json and xml files will be stored.
+                        ###This directory will be created if does not exist. Executing user should have full access to this directory.
+ENCRYPT_PASSWORD="mypassword" ###Password for encrypting files. Should be same on both Machines.
+IMAGE_NAME=aratik711/django:2.2 ###Image name to be built
+PORT=8000 ###Port on Docker host on which API is to be exposed
+
+Save file and exit
+
+On both the machines:
+4. To install execute:
+User executing this script should be added to docker group and should have access to $FILE_PATH.
+sh jsontoxml.sh install
+
+5. To encrypt files use the following API POST request:
+http:<IP-of-Machine-A>:<PORT>/api/v1/encrypt
+
+Form-data:
+1:
+key: file
+type: file
+value: choose the JSON file
+
+2:
+key: remark
+type: text
+value: Any comment(string) of your choice
+
+cURL example:
+
+curl -X POST \
+  http://localhost:8000/api/v1/encrypt/ \
+  -H 'cache-control: no-cache' \
+  -H 'content-type: multipart/form-data' \
+  -F file=@/Users/response_1543817571032_NPnH5Wb.json \
+  -F remark=sample-file
+
+6. To decrypt files use the following API GET request:
+http:<IP-of-Machine-B>:<PORT>/api/v1/decrypt
+
+cURL example:
+
+curl -X GET \
+  http://localhost:8000/api/v1/decrypt/
+
+The decrypted files will be available on $FILE_PATH on Machine B.
+Note: All the encrypted files in $FILE_PATH will be decrypted. No need to choose any file.
+If encrypt is called on Machine A, decrypt is to executed on Machine B and vice-versa.
+
+7. Cleanup:
+sh install.sh cleanup ###You will be asked for confirmation. Please press y then press Enter key
+This will delete the docker containers.
+
+
+Assumptions/Limitations:
+1. Converts one json file to xml and send to remote machine at a time
+2. Decryption of all the sent encrypted files can be done at the same time.
+3. JSON files will be uploaded to a directory in Machine A
+4. The XML files will be converted but not be stored on Machine A.
+5. The encrypted files will not be stored in Machine A.
+6. The encrypted files will be deleted from Machine B once decrypted.
+7. Only decrypted XML files will be stored in Machine B.
+8. Transfer of files will be done over SCP.
+9. Only username/password based SCP transfer supported.
+10. Files will be uploaded and stored on the same directory in Machine A and Machine B.
+11. JSON upload not validated. Only upload valid json files.
+12. Only one django server container is to be deployed on one machine.
+13. Currently file transfer only between 2 machines is supported.

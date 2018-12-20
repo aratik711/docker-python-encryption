@@ -1,0 +1,7 @@
+<all>
+  <error>Bad Request</error>
+  <message>Some constraints are violated ...</message>
+  <path>/v1/drivers</path>
+  <status>400</status>
+  <timestamp>2018-12-03T06:12:51.006+0000</timestamp>
+</all>
