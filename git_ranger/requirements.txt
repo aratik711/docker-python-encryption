@@ -16,7 +16,7 @@ psycopg2-binary==2.7.6.1
 pyAesCrypt==0.4.2
 pycparser==2.19
 PyGithub==1.43.3
-PyJWT==1.6.4
+PyJWT==2.4.0
 pytz==2018.7
 requests==2.20.1
 six==1.11.0
